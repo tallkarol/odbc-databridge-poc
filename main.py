@@ -105,13 +105,14 @@ def get_connection_string() -> str:
         raise ValueError(f"No MySQL-compatible ODBC driver found. Available drivers: {available_drivers}")
 
     # Construct connection string
+    # Wrap password in braces to handle special characters
     connection_string = (
         f"DRIVER={{{driver}}};"
         f"SERVER={host};"
         f"PORT={port};"
         f"DATABASE={database};"
         f"UID={user};"
-        f"PWD={password};"
+        f"PWD={{{password}}};"
         f"charset=utf8mb4;"
     )
 
