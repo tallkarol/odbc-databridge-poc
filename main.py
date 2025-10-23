@@ -9,6 +9,7 @@ import os
 import logging
 from typing import Dict, Any, Optional
 from contextlib import contextmanager
+from urllib.parse import quote_plus
 
 import pyodbc
 from fastapi import FastAPI, HTTPException
@@ -125,10 +126,74 @@ def get_db_connection():
     """
     Context manager for database connections.
     Ensures proper connection cleanup.
+
+    Uses individual connection parameters instead of a connection string
+    to avoid issues with special characters in passwords.
     """
     conn = None
     try:
-        connection_string = get_connection_string()
+        # Get configuration
+        host = os.getenv('DB_HOST')
+        port = os.getenv('DB_PORT', '3306')
+        database = os.getenv('DB_NAME')
+        user = os.getenv('DB_USER')
+        password = os.getenv('DB_PASSWORD')
+
+        # Validate required variables
+        missing_vars = []
+        if not host:
+            missing_vars.append('DB_HOST')
+        if not database:
+            missing_vars.append('DB_NAME')
+        if not user:
+            missing_vars.append('DB_USER')
+        if not password:
+            missing_vars.append('DB_PASSWORD')
+
+        if missing_vars:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+
+        # Find available driver
+        available_drivers = pyodbc.drivers()
+        driver = None
+        preferred_drivers = [
+            "MySQL ODBC 8.0 Driver",
+            "MariaDB ODBC 3.1 Driver",
+            "MariaDB Unicode",
+            "MySQL",
+            "MariaDB"
+        ]
+
+        for preferred in preferred_drivers:
+            if preferred in available_drivers:
+                driver = preferred
+                break
+
+        if not driver:
+            for d in available_drivers:
+                if "mysql" in d.lower() or "mariadb" in d.lower():
+                    driver = d
+                    break
+
+        if not driver:
+            raise ValueError(f"No MySQL-compatible ODBC driver found. Available drivers: {available_drivers}")
+
+        logger.info(f"Attempting connection with driver: {driver}, host: {host}, database: {database}, user: {user}")
+
+        # URL encode the password to handle special characters
+        encoded_password = quote_plus(password)
+
+        # Build connection string
+        connection_string = (
+            f"DRIVER={{{driver}}};"
+            f"SERVER={host};"
+            f"PORT={port};"
+            f"DATABASE={database};"
+            f"UID={user};"
+            f"PWD={encoded_password};"
+        )
+
+        logger.info(f"Connection string built (password encoded)")
         conn = pyodbc.connect(connection_string, timeout=10)
         logger.info("Database connection established")
         yield conn
