@@ -180,20 +180,18 @@ def get_db_connection():
 
         logger.info(f"Attempting connection with driver: {driver}, host: {host}, database: {database}, user: {user}")
 
-        # Build connection string with OPTION=3 for MySQL/MariaDB compatibility
-        # Using USER/PASSWORD instead of UID/PWD as alternative syntax
+        # Try simplest possible connection string
         connection_string = (
             f"DRIVER={{{driver}}};"
             f"SERVER={host};"
             f"PORT={port};"
             f"DATABASE={database};"
-            f"USER={user};"
-            f"PASSWORD={password};"
-            f"OPTION=3;"
+            f"UID={user};"
+            f"PWD={password};"
         )
 
-        logger.info(f"Connection string built with OPTION=3 compatibility flag")
-        conn = pyodbc.connect(connection_string, timeout=10)
+        logger.info(f"Connection string: DRIVER={{{driver}}};SERVER={host};PORT={port};DATABASE={database};UID={user};PWD=***")
+        conn = pyodbc.connect(connection_string, timeout=10, autocommit=True)
         logger.info("Database connection established")
         yield conn
     except pyodbc.Error as e:
