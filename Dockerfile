@@ -9,28 +9,29 @@ RUN apt-get update && apt-get install -y \
     # ODBC driver manager
     unixodbc \
     unixodbc-dev \
-    # MySQL ODBC driver
+    # MySQL client libraries
     default-libmysqlclient-dev \
     # Download tools
     wget \
     gnupg \
     curl \
+    lsb-release \
     # Build tools (needed for some Python packages)
     gcc \
     g++ \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and install MySQL ODBC Connector 8.0
-RUN wget https://dev.mysql.com/get/Downloads/Connector-ODBC/8.0/mysql-connector-odbc-8.0.35-linux-glibc2.28-x86-64bit.tar.gz \
-    && tar -xzf mysql-connector-odbc-8.0.35-linux-glibc2.28-x86-64bit.tar.gz \
-    && cp mysql-connector-odbc-8.0.35-linux-glibc2.28-x86-64bit/lib/libmyodbc8* /usr/lib/x86_64-linux-gnu/odbc/ \
-    && rm -rf mysql-connector-odbc-8.0.35-linux-glibc2.28-x86-64bit* \
-    # Register the MySQL ODBC driver
-    && echo "[MySQL ODBC 8.0 Driver]" > /etc/odbcinst.ini \
-    && echo "Description = MySQL ODBC 8.0 Driver" >> /etc/odbcinst.ini \
-    && echo "Driver = /usr/lib/x86_64-linux-gnu/odbc/libmyodbc8w.so" >> /etc/odbcinst.ini \
-    && echo "Setup = /usr/lib/x86_64-linux-gnu/odbc/libmyodbc8S.so" >> /etc/odbcinst.ini \
-    && echo "UsageCount = 1" >> /etc/odbcinst.ini
+# Install MySQL ODBC Connector from MySQL APT repository
+# This is more reliable than direct downloads and always gets compatible versions
+RUN wget https://dev.mysql.com/get/mysql-apt-config_0.8.29-1_all.deb \
+    && DEBIAN_FRONTEND=noninteractive dpkg -i mysql-apt-config_0.8.29-1_all.deb \
+    && apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-connector-odbc \
+    && rm mysql-apt-config_0.8.29-1_all.deb \
+    && rm -rf /var/lib/apt/lists/*
+
+# Register the MySQL ODBC driver with odbcinst
+RUN odbcinst -i -d -f /usr/share/mysql-connector-odbc/odbcinst.ini
 
 # Copy requirements file
 COPY requirements.txt .
