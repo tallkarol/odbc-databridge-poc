@@ -157,9 +157,9 @@ def get_db_connection():
         available_drivers = pyodbc.drivers()
         driver = None
         preferred_drivers = [
-            "MySQL ODBC 8.0 Driver",
-            "MariaDB ODBC 3.1 Driver",
             "MariaDB Unicode",
+            "MariaDB ODBC 3.1 Driver",
+            "MySQL ODBC 8.0 Driver",
             "MySQL",
             "MariaDB"
         ]
