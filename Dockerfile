@@ -4,34 +4,19 @@ FROM python:3.11-slim
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies required for ODBC
+# Install system dependencies and MariaDB ODBC driver (MySQL-compatible)
+# Using Debian's stable packages - no external repos, no expired keys, no BS
 RUN apt-get update && apt-get install -y \
-    # ODBC driver manager
     unixodbc \
     unixodbc-dev \
-    # MySQL client libraries
-    default-libmysqlclient-dev \
-    # Download tools
-    wget \
-    gnupg \
-    curl \
-    lsb-release \
-    # Build tools (needed for some Python packages)
-    gcc \
-    g++ \
+    odbc-mariadb \
     && rm -rf /var/lib/apt/lists/*
 
-# Install MySQL ODBC Connector from MySQL APT repository
-# This is more reliable than direct downloads and always gets compatible versions
-RUN wget https://dev.mysql.com/get/mysql-apt-config_0.8.29-1_all.deb \
-    && DEBIAN_FRONTEND=noninteractive dpkg -i mysql-apt-config_0.8.29-1_all.deb \
-    && apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-connector-odbc \
-    && rm mysql-apt-config_0.8.29-1_all.deb \
-    && rm -rf /var/lib/apt/lists/*
-
-# Register the MySQL ODBC driver with odbcinst
-RUN odbcinst -i -d -f /usr/share/mysql-connector-odbc/odbcinst.ini
+# MariaDB ODBC driver is automatically registered by the package
+# Verify it's there and create an alias as "MySQL ODBC 8.0 Driver" for compatibility
+RUN echo "[MySQL ODBC 8.0 Driver]" >> /etc/odbcinst.ini \
+    && echo "Description = MariaDB ODBC Driver (MySQL Compatible)" >> /etc/odbcinst.ini \
+    && echo "Driver = /usr/lib/x86_64-linux-gnu/odbc/libmaodbc.so" >> /etc/odbcinst.ini
 
 # Copy requirements file
 COPY requirements.txt .

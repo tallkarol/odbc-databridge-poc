@@ -77,10 +77,36 @@ def get_connection_string() -> str:
     if missing_vars:
         raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
+    # Try to find an available MySQL-compatible ODBC driver
+    available_drivers = pyodbc.drivers()
+    driver = None
+
+    # Preferred driver names in order of preference
+    preferred_drivers = [
+        "MySQL ODBC 8.0 Driver",
+        "MariaDB ODBC 3.1 Driver",
+        "MySQL",
+        "MariaDB"
+    ]
+
+    for preferred in preferred_drivers:
+        if preferred in available_drivers:
+            driver = preferred
+            break
+
+    if not driver:
+        # Fallback: try to find any driver with "mysql" or "mariadb" in the name
+        for d in available_drivers:
+            if "mysql" in d.lower() or "mariadb" in d.lower():
+                driver = d
+                break
+
+    if not driver:
+        raise ValueError(f"No MySQL-compatible ODBC driver found. Available drivers: {available_drivers}")
+
     # Construct connection string
-    # Using MySQL ODBC 8.0 Driver (adjust based on what's installed)
     connection_string = (
-        f"DRIVER={{MySQL ODBC 8.0 Driver}};"
+        f"DRIVER={{{driver}}};"
         f"SERVER={host};"
         f"PORT={port};"
         f"DATABASE={database};"
@@ -89,7 +115,7 @@ def get_connection_string() -> str:
         f"charset=utf8mb4;"
     )
 
-    logger.info(f"Connection string constructed for host: {host}, database: {database}")
+    logger.info(f"Using driver: {driver}, connecting to host: {host}, database: {database}")
     return connection_string
 
 
