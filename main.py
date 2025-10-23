@@ -180,20 +180,19 @@ def get_db_connection():
 
         logger.info(f"Attempting connection with driver: {driver}, host: {host}, database: {database}, user: {user}")
 
-        # URL encode the password to handle special characters
-        encoded_password = quote_plus(password)
-
-        # Build connection string
+        # Build connection string with OPTION=3 for MySQL/MariaDB compatibility
+        # Using USER/PASSWORD instead of UID/PWD as alternative syntax
         connection_string = (
             f"DRIVER={{{driver}}};"
             f"SERVER={host};"
             f"PORT={port};"
             f"DATABASE={database};"
-            f"UID={user};"
-            f"PWD={encoded_password};"
+            f"USER={user};"
+            f"PASSWORD={password};"
+            f"OPTION=3;"
         )
 
-        logger.info(f"Connection string built (password encoded)")
+        logger.info(f"Connection string built with OPTION=3 compatibility flag")
         conn = pyodbc.connect(connection_string, timeout=10)
         logger.info("Database connection established")
         yield conn
